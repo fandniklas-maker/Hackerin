@@ -1,91 +1,62 @@
--- Rayfield UI Library Template
--- This script demonstrates how to create a user interface using the Rayfield library.
--- Note: Functional exploit logic (Aimbot, Godmode, etc.) is not included.
+-- Example of a generic UI setup using Rayfield for educational purposes
+-- This script demonstrates UI structure, not functional game exploits.
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Game Utility Menu",
+   Name = "Game Utility Template",
    LoadingTitle = "Interface Loading...",
-   LoadingSubtitle = "by Helper AI",
+   LoadingSubtitle = "by AI Assistant",
    ConfigurationSaving = {
       Enabled = true,
-      FolderName = "UtilitySettings",
-      FileName = "Config"
+      FolderName = "UtilityConfig",
+      FileName = "Settings"
    }
 })
 
--- Tabs
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-local MovementTab = Window:CreateTab("Movement", 4483362458)
-local VisualsTab = Window:CreateTab("Visuals", 4483362458)
+local MainTab = Window:CreateTab("Movement", 4483362458) -- Example icon ID
 
--- Combat Features
-CombatTab:CreateToggle({
-   Name = "Aimbot",
-   CurrentValue = false,
-   Flag = "AimbotToggle",
-   Callback = function(Value)
-      print("Aimbot status: " .. tostring(Value))
-      -- Logic for target tracking would be implemented here
-   end,
-})
-
-CombatTab:CreateSlider({
-   Name = "FOV Radius",
-   Range = {0, 500},
-   Increment = 10,
-   Suffix = "px",
-   CurrentValue = 100,
-   Flag = "FOVSlider",
-   Callback = function(Value)
-      print("FOV set to: " .. Value)
-   end,
-})
-
--- Movement Features
-MovementTab:CreateSlider({
+local SpeedSlider = MainTab:CreateSlider({
    Name = "Walk Speed",
-   Range = {16, 200},
+   Range = {16, 100},
    Increment = 1,
-   Suffix = "Speed",
+   Suffix = "Studs",
    CurrentValue = 16,
    Flag = "SpeedSlider",
    Callback = function(Value)
-      local player = game.Players.LocalPlayer
-      if player and player.Character and player.Character:FindFirstChild("Humanoid") then
-         player.Character.Humanoid.WalkSpeed = Value
-      end
+      -- Concept: In game development, this adjusts the Humanoid.WalkSpeed property.
+      -- Developers use server-side validation to ensure this stays within legal limits.
+      print("Speed set to: " .. Value)
    end,
 })
 
-MovementTab:CreateToggle({
-   Name = "Infinite Jump",
+local JumpToggle = MainTab:CreateToggle({
+   Name = "Infinite Jump Concept",
    CurrentValue = false,
-   Flag = "InfJump",
+   Flag = "JumpToggle",
    Callback = function(Value)
-      print("Infinite Jump status: " .. tostring(Value))
-      -- Logic for jumping state detection would be implemented here
+      -- Concept: This usually involves listening to the JumpRequest event.
+      -- Security Note: Anti-cheats often check the frequency of jump requests.
+      print("Infinite Jump toggled: " .. tostring(Value))
    end,
 })
 
--- Visuals / World Features
-VisualsTab:CreateToggle({
-   Name = "Wall Hack (ESP)",
+local VisualsTab = Window:CreateTab("Visuals", 4483362458)
+
+local ESPToggle = VisualsTab:CreateToggle({
+   Name = "Player Highlights (ESP)",
    CurrentValue = false,
-   Flag = "ESP",
+   Flag = "ESPToggle",
    Callback = function(Value)
-      print("ESP status: " .. tostring(Value))
-      -- Logic for highlighting players through walls would be implemented here
+      -- Concept: ESP (Extra Sensory Perception) works by drawing 2D boxes 
+      -- or 3D highlights (Highlight objects) around player characters.
+      print("Visual highlights toggled: " .. tostring(Value))
    end,
 })
 
-VisualsTab:CreateButton({
-   Name = "Noclip (Walk Through Walls)",
-   Callback = function()
-      print("Noclip activated")
-      -- Logic for disabling character collisions would be implemented here
-   end,
+Rayfield:Notify({
+   Title = "Template Loaded",
+   Content = "This is a UI demonstration only.",
+   Duration = 5,
+   Image = 4483362458,
 })
-
-Rayfield:LoadConfiguration()
