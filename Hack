@@ -1,13 +1,15 @@
+
+```lua
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "CodingFleet | Movement Script",
-   LoadingTitle = "Loading Rayfield...",
+   Name = "Gunfight Arena | CodingFleet",
+   LoadingTitle = "Loading Script...",
    LoadingSubtitle = "by CodingFleet",
    ConfigurationSaving = {
       Enabled = true,
-      FolderName = "CodingFleetScripts",
-      FileName = "MovementHub"
+      FolderName = "GunfightArenaCF",
+      FileName = "Config"
    },
    Discord = {
       Enabled = false,
@@ -18,87 +20,155 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- Variables
-local Player = game.Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
-local InfiniteJumpEnabled = false
-local NoclipEnabled = false
-local WalkSpeedValue = 16
+local Toggles = {
+    InfiniteJump = false,
+    Noclip = false,
+    Aimbot = false,
+    TeamCheck = true
+}
 
--- Tab
-local MainTab = Window:CreateTab("Movement", 4483362458) -- Movement Icon
+local Config = {
+    Speed = 16,
+    JumpPower = 50,
+    AimbotSmoothness = 0.2
+}
+
+-- Tabs
+local MainTab = Window:CreateTab("Main", 4483362458)
+local CombatTab = Window:CreateTab("Combat", 4483362458)
 
 -- Infinite Jump Logic
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if InfiniteJumpEnabled then
-        Player.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
     end
 end)
 
 -- Noclip Logic
-game:GetService("RunService").Stepped:Connect(function()
-    if NoclipEnabled then
-        for _, v in pairs(Player.Character:GetDescendants()) do
-            if v:IsA("BasePart") and v.CanCollide == true then
-                v.CanCollide = false
+RunService.Stepped:Connect(function()
+    if Toggles.Noclip and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
             end
         end
     end
 end)
 
--- UI Elements
+-- Aimbot Logic
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            
+            -- Team Protection
+            if Toggles.TeamCheck and player.Team == LocalPlayer.Team then
+                continue
+            end
+
+            local pos = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            local mousePos = UserInputService:GetMouseLocation()
+            local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+
+            if distance < shortestDistance then
+                closestPlayer = player
+                shortestDistance = distance
+            end
+        end
+    end
+    return closestPlayer
+end
+
+RunService.RenderStepped:Connect(function()
+    if Toggles.Aimbot then
+        local target = GetClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local targetPos = target.Character.Head.Position
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Config.AimbotSmoothness)
+        end
+    end
+end)
+
+-- UI Elements: Main Tab
 MainTab:CreateToggle({
    Name = "Infinite Jump",
    CurrentValue = false,
-   Flag = "InfJump",
    Callback = function(Value)
-      InfiniteJumpEnabled = Value
+      Toggles.InfiniteJump = Value
    end,
 })
 
 MainTab:CreateToggle({
    Name = "Noclip",
    CurrentValue = false,
-   Flag = "Noclip",
    Callback = function(Value)
-      NoclipEnabled = Value
-      if not Value then
-          -- Reset collision when turned off (requires respawn or manual reset usually)
-          Rayfield:Notify({
-             Title = "Noclip Disabled",
-             Content = "Collision will return upon character reset.",
-             Duration = 5,
-             Image = 4483362458,
-          })
-      end
+      Toggles.Noclip = Value
    end,
 })
 
 MainTab:CreateSlider({
    Name = "WalkSpeed",
-   Range = {16, 500},
+   Range = {16, 250},
    Increment = 1,
-   Suffix = " Speed",
+   Suffix = "Speed",
    CurrentValue = 16,
-   Flag = "SpeedSlider",
    Callback = function(Value)
-      WalkSpeedValue = Value
-      Player.Character.Humanoid.WalkSpeed = Value
+      Config.Speed = Value
+      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+          LocalPlayer.Character.Humanoid.WalkSpeed = Value
+      end
    end,
 })
 
--- Keep Speed Applied even after death
-Player.CharacterAdded:Connect(function(NewCharacter)
-    Character = NewCharacter
-    Humanoid = NewCharacter:WaitForChild("Humanoid")
-    task.wait(0.5)
-    Humanoid.WalkSpeed = WalkSpeedValue
+-- Update speed loop
+spawn(function()
+    while task.wait() do
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.WalkSpeed = Config.Speed
+        end
+    end
 end)
+
+-- UI Elements: Combat Tab
+CombatTab:CreateToggle({
+   Name = "Aimbot",
+   CurrentValue = false,
+   Callback = function(Value)
+      Toggles.Aimbot = Value
+   end,
+})
+
+CombatTab:CreateToggle({
+   Name = "Team Protection",
+   CurrentValue = true,
+   Callback = function(Value)
+      Toggles.TeamCheck = Value
+   end,
+})
+
+CombatTab:CreateSlider({
+   Name = "Aimbot Smoothness",
+   Range = {0, 1},
+   Increment = 0.05,
+   Suffix = "Smooth",
+   CurrentValue = 0.2,
+   Callback = function(Value)
+      Config.AimbotSmoothness = Value
+   end,
+})
 
 Rayfield:Notify({
    Title = "Script Loaded",
-   Content = "CodingFleet Movement Hack is ready!",
+   Content = "Gunfight Arena script is ready!",
    Duration = 5,
    Image = 4483362458,
 })
+```
