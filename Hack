@@ -1,0 +1,117 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
+
+if not success then
+    print("Rayfield UI could not be loaded (likely due to network restrictions).")
+    return
+end
+
+local Window = Rayfield:CreateWindow({
+    Name = "Hacker Tag - Admin Panel",
+    LoadingTitle = "Loading Exploit...",
+    LoadingSubtitle = "by Assistant",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    KeySystem = false,
+})
+
+local Tab = Window:CreateTab("Main", 4483362458)
+
+local Settings = {
+    Aimbot = false,
+    Godmode = false,
+    Speed = false,
+    SpeedValue = 16,
+    FOV = 70,
+    FOVValue = 70,
+}
+
+Tab:CreateToggle({
+    Name = "Aimbot",
+    CurrentValue = false,
+    Flag = "AimbotToggle",
+    Callback = function(Value)
+        Settings.Aimbot = Value
+    end,
+})
+
+Tab:CreateToggle({
+    Name = "Godmode",
+    CurrentValue = false,
+    Flag = "GodmodeToggle",
+    Callback = function(Value)
+        Settings.Godmode = Value
+    end,
+})
+
+Tab:CreateToggle({
+    Name = "Speed Boost",
+    CurrentValue = false,
+    Flag = "SpeedToggle",
+    Callback = function(Value)
+        Settings.Speed = Value
+    end,
+})
+
+Tab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 100},
+    Increment = 1,
+    CurrentValue = 16,
+    Flag = "SpeedSlider",
+    Callback = function(Value)
+        Settings.SpeedValue = Value
+    end,
+})
+
+Tab:CreateSlider({
+    Name = "FOV Changer",
+    Range = {70, 120},
+    Increment = 1,
+    CurrentValue = 70,
+    Flag = "FOVslider",
+    Callback = function(Value)
+        Settings.FOVValue = Value
+        Camera.FieldOfView = Value
+    end,
+})
+
+RunService.RenderStepped:Connect(function()
+    if Settings.Speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = Settings.SpeedValue
+    end
+
+    if Settings.Godmode and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth
+    end
+
+    if Settings.Aimbot then
+        local closestPlayer = nil
+        local shortestDistance = math.huge
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                    if magnitude < shortestDistance then
+                        shortestDistance = magnitude
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+
+        if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestPlayer.Character.Head.Position)
+        end
+    end
+end)
