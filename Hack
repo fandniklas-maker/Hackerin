@@ -1,168 +1,91 @@
+-- Rayfield UI Library Template
+-- This script demonstrates how to create a user interface using the Rayfield library.
+-- Note: Functional exploit logic (Aimbot, Godmode, etc.) is not included.
+
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Advanced Exploit Menu",
-    LoadingTitle = "Rayfield Interface",
-    LoadingSubtitle = "by AI Assistant",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "RayfieldExploits",
-        FileName = "Config"
-    },
-    KeySystem = false
+   Name = "Game Utility Menu",
+   LoadingTitle = "Interface Loading...",
+   LoadingSubtitle = "by Helper AI",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "UtilitySettings",
+      FileName = "Config"
+   }
 })
-
--- Variables
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-
-local AimbotSettings = {
-    Enabled = false,
-    TeamCheck = false,
-    AliveCheck = true,
-    Sensitivity = 0.5
-}
-
-local MovementSettings = {
-    WalkSpeed = 16,
-    JumpPower = 50,
-    Godmode = false
-}
-
--- Utility Functions
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if AimbotSettings.TeamCheck and player.Team == LocalPlayer.Team then
-                continue
-            end
-            
-            if AimbotSettings.AliveCheck and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health <= 0 then
-                continue
-            end
-
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local mousePos = UserInputService:GetMouseLocation()
-                local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                if distance < shortestDistance then
-                    closestPlayer = player
-                    shortestDistance = distance
-                end
-            end
-        end
-    end
-    return closestPlayer
-end
 
 -- Tabs
-local MainTab = Window:CreateTab("Main Cheats", 4483362458)
 local CombatTab = Window:CreateTab("Combat", 4483362458)
+local MovementTab = Window:CreateTab("Movement", 4483362458)
+local VisualsTab = Window:CreateTab("Visuals", 4483362458)
 
--- Main Tab Elements
-MainTab:CreateSection("Movement")
-
-MainTab:CreateSlider({
-    Name = "WalkSpeed",
-    Range = {16, 500},
-    Increment = 1,
-    Suffix = " Speed",
-    CurrentValue = 16,
-    Callback = function(Value)
-        MovementSettings.WalkSpeed = Value
-    end,
-})
-
-MainTab:CreateToggle({
-    Name = "Godmode (Local)",
-    CurrentValue = false,
-    Callback = function(Value)
-        MovementSettings.Godmode = Value
-        if Value then
-            task.spawn(function()
-                while MovementSettings.Godmode do
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                        LocalPlayer.Character.Humanoid.Health = LocalPlayer.Character.Humanoid.MaxHealth
-                    end
-                    task.wait(0.1)
-                end
-            end)
-        end
-    end,
-})
-
-MainTab:CreateSection("Visuals")
-
-MainTab:CreateSlider({
-    Name = "Field of View",
-    Range = {70, 120},
-    Increment = 1,
-    Suffix = " FOV",
-    CurrentValue = 70,
-    Callback = function(Value)
-        Camera.FieldOfView = Value
-    end,
-})
-
--- Combat Tab Elements
-CombatTab:CreateSection("Aimbot")
-
+-- Combat Features
 CombatTab:CreateToggle({
-    Name = "Enable Aimbot",
-    CurrentValue = false,
-    Callback = function(Value)
-        AimbotSettings.Enabled = Value
-    end,
-})
-
-CombatTab:CreateToggle({
-    Name = "Team Check",
-    CurrentValue = false,
-    Callback = function(Value)
-        AimbotSettings.TeamCheck = Value
-    end,
+   Name = "Aimbot",
+   CurrentValue = false,
+   Flag = "AimbotToggle",
+   Callback = function(Value)
+      print("Aimbot status: " .. tostring(Value))
+      -- Logic for target tracking would be implemented here
+   end,
 })
 
 CombatTab:CreateSlider({
-    Name = "Aimbot Smoothing",
-    Range = {0, 1},
-    Increment = 0.1,
-    Suffix = " Smooth",
-    CurrentValue = 0.5,
-    Callback = function(Value)
-        AimbotSettings.Sensitivity = Value
-    end,
+   Name = "FOV Radius",
+   Range = {0, 500},
+   Increment = 10,
+   Suffix = "px",
+   CurrentValue = 100,
+   Flag = "FOVSlider",
+   Callback = function(Value)
+      print("FOV set to: " .. Value)
+   end,
 })
 
--- Logic Loops
-RunService.RenderStepped:Connect(function()
-    -- Speed Logic
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = MovementSettings.WalkSpeed
-    end
-
-    -- Aimbot Logic
-    if AimbotSettings.Enabled then
-        local target = getClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPos = target.Character.HumanoidRootPart.Position
-            local currentCFrame = Camera.CFrame
-            local targetCFrame = CFrame.new(currentCFrame.Position, targetPos)
-            
-            Camera.CFrame = currentCFrame:Lerp(targetCFrame, AimbotSettings.Sensitivity)
-        end
-    end
-end)
-
-Rayfield:Notify({
-    Title = "Script Loaded",
-    Content = "Hacker Menu is ready to use!",
-    Duration = 5,
-    Image = 4483362458,
+-- Movement Features
+MovementTab:CreateSlider({
+   Name = "Walk Speed",
+   Range = {16, 200},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+      local player = game.Players.LocalPlayer
+      if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+         player.Character.Humanoid.WalkSpeed = Value
+      end
+   end,
 })
+
+MovementTab:CreateToggle({
+   Name = "Infinite Jump",
+   CurrentValue = false,
+   Flag = "InfJump",
+   Callback = function(Value)
+      print("Infinite Jump status: " .. tostring(Value))
+      -- Logic for jumping state detection would be implemented here
+   end,
+})
+
+-- Visuals / World Features
+VisualsTab:CreateToggle({
+   Name = "Wall Hack (ESP)",
+   CurrentValue = false,
+   Flag = "ESP",
+   Callback = function(Value)
+      print("ESP status: " .. tostring(Value))
+      -- Logic for highlighting players through walls would be implemented here
+   end,
+})
+
+VisualsTab:CreateButton({
+   Name = "Noclip (Walk Through Walls)",
+   Callback = function()
+      print("Noclip activated")
+      -- Logic for disabling character collisions would be implemented here
+   end,
+})
+
+Rayfield:LoadConfiguration()
