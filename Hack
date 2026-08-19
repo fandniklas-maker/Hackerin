@@ -6,148 +6,125 @@ local Window = Rayfield:CreateWindow({
    LoadingSubtitle = "by CodingFleet",
    ConfigurationSaving = {
       Enabled = true,
-      FolderName = "GunfightArenaCF",
-      FileName = "Config"
-   },
-   Discord = {
-      Enabled = false,
-      Invite = "",
-      RememberJoins = true
+      FolderName = "GunfightArenaConfig",
+      FileName = "MainConfig"
    },
    KeySystem = false
 })
 
 -- Variables
-local Players = game:GetService("Players")
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 local Toggles = {
     Speed = false,
-    InfiniteJump = false,
+    InfJump = false,
     Noclip = false,
     Aimbot = false,
     TeamCheck = true
 }
 
-local Values = {
-    WalkSpeed = 16,
-    JumpPower = 50,
+local Config = {
+    SpeedValue = 16,
     AimbotSmoothness = 0.2
 }
 
--- Functions
-local function getClosestPlayer()
+-- Update character reference on respawn
+Player.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    Humanoid = newChar:WaitForChild("Humanoid")
+end)
+
+-- Tabs
+local MovementTab = Window:CreateTab("Movement", 4483362458)
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+
+-- Movement: Speed
+MovementTab:CreateSlider({
+   Name = "WalkSpeed",
+   Range = {16, 200},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "SpeedSlider",
+   Callback = function(Value)
+      Config.SpeedValue = Value
+   end,
+})
+
+RunService.RenderStepped:Connect(function()
+    if Humanoid then
+        Humanoid.WalkSpeed = Config.SpeedValue
+    end
+end)
+
+-- Movement: Infinite Jump
+MovementTab:CreateToggle({
+   Name = "Infinite Jump",
+   CurrentValue = false,
+   Flag = "InfJumpToggle",
+   Callback = function(Value)
+      Toggles.InfJump = Value
+   end,
+})
+
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfJump then
+        Humanoid:ChangeState("Jumping")
+    end
+end)
+
+-- Movement: Noclip
+MovementTab:CreateToggle({
+   Name = "Noclip",
+   CurrentValue = false,
+   Flag = "NoclipToggle",
+   Callback = function(Value)
+      Toggles.Noclip = Value
+   end,
+})
+
+RunService.Stepped:Connect(function()
+    if Toggles.Noclip and Character then
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Combat: Aimbot Logic
+local function GetClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
             
-            -- Team Protection Logic
-            if Toggles.TeamCheck and player.Team == LocalPlayer.Team then
+            -- Team Protection Check
+            if Toggles.TeamCheck and v.Team == Player.Team then
                 continue
             end
 
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                if distance < shortestDistance then
-                    closestPlayer = player
-                    shortestDistance = distance
-                end
+            local pos = Camera:WorldToViewportPoint(v.Character.PrimaryPart.Position)
+            local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).magnitude
+            
+            if magnitude < shortestDistance then
+                closestPlayer = v
+                shortestDistance = magnitude
             end
         end
     end
     return closestPlayer
 end
 
--- Main Loops
-RunService.RenderStepped:Connect(function()
-    -- Speed
-    if Toggles.Speed and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = Values.WalkSpeed
-    end
-
-    -- Noclip
-    if Toggles.Noclip and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-
-    -- Aimbot
-    if Toggles.Aimbot then
-        local target = getClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Character.Head.Position), Values.AimbotSmoothness)
-        end
-    end
-end)
-
--- Infinite Jump Logic
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid:ChangeState("Jumping")
-    end
-end)
-
--- UI Tabs
-local MainTab = Window:CreateTab("Main", 4483362458) -- Main features
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-
--- Main Tab Elements
-MainTab:CreateSection("Movement")
-
-MainTab:CreateToggle({
-   Name = "Speed Hack",
-   CurrentValue = false,
-   Flag = "SpeedToggle",
-   Callback = function(Value)
-      Toggles.Speed = Value
-      if not Value then LocalPlayer.Character.Humanoid.WalkSpeed = 16 end
-   end,
-})
-
-MainTab:CreateSlider({
-   Name = "Speed Value",
-   Range = {16, 250},
-   Increment = 1,
-   Suffix = "Speed",
-   CurrentValue = 16,
-   Flag = "SpeedSlider",
-   Callback = function(Value)
-      Values.WalkSpeed = Value
-   end,
-})
-
-MainTab:CreateToggle({
-   Name = "Infinite Jump",
-   CurrentValue = false,
-   Flag = "InfJump",
-   Callback = function(Value)
-      Toggles.InfiniteJump = Value
-   end,
-})
-
-MainTab:CreateToggle({
-   Name = "Noclip",
-   CurrentValue = false,
-   Flag = "Noclip",
-   Callback = function(Value)
-      Toggles.Noclip = Value
-   end,
-})
-
--- Combat Tab Elements
-CombatTab:CreateSection("Aimbot Settings")
-
 CombatTab:CreateToggle({
-   Name = "Enable Aimbot",
+   Name = "Aimbot",
    CurrentValue = false,
    Flag = "AimbotToggle",
    Callback = function(Value)
@@ -158,7 +135,7 @@ CombatTab:CreateToggle({
 CombatTab:CreateToggle({
    Name = "Team Protection",
    CurrentValue = true,
-   Flag = "TeamCheck",
+   Flag = "TeamCheckToggle",
    Callback = function(Value)
       Toggles.TeamCheck = Value
    end,
@@ -166,19 +143,29 @@ CombatTab:CreateToggle({
 
 CombatTab:CreateSlider({
    Name = "Aimbot Smoothness",
-   Range = {0.1, 1},
+   Range = {0, 1},
    Increment = 0.1,
    Suffix = "Smooth",
    CurrentValue = 0.2,
-   Flag = "Smoothness",
+   Flag = "SmoothSlider",
    Callback = function(Value)
-      Values.AimbotSmoothness = Value
+      Config.AimbotSmoothness = Value
    end,
 })
 
+RunService.RenderStepped:Connect(function()
+    if Toggles.Aimbot then
+        local target = GetClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local targetPos = target.Character.Head.Position
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), Config.AimbotSmoothness)
+        end
+    end
+end)
+
 Rayfield:Notify({
    Title = "Script Loaded",
-   Content = "Gunfight Arena script is ready!",
+   Content = "Enjoy Gunfight Arena Hacks!",
    Duration = 5,
    Image = 4483362458,
 })
