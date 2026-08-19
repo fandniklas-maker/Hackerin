@@ -1,62 +1,82 @@
--- Example of a generic UI setup using Rayfield for educational purposes
--- This script demonstrates UI structure, not functional game exploits.
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Game Utility Template",
-   LoadingTitle = "Interface Loading...",
-   LoadingSubtitle = "by AI Assistant",
+   Name = "Game Utility Interface",
+   LoadingTitle = "Loading Utilities...",
+   LoadingSubtitle = "Educational Purpose Only",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = "UtilityConfig",
-      FileName = "Settings"
-   }
+      FileName = "MainGui"
+   },
+   KeySystem = false
 })
 
-local MainTab = Window:CreateTab("Movement", 4483362458) -- Example icon ID
+local MovementTab = Window:CreateTab("Movement", 4483362458)
+local VisualsTab = Window:CreateTab("Visuals", 4483362458)
 
-local SpeedSlider = MainTab:CreateSlider({
+-- Movement Features
+local SpeedSlider = MovementTab:CreateSlider({
    Name = "Walk Speed",
    Range = {16, 100},
    Increment = 1,
-   Suffix = "Studs",
+   Suffix = " Speed",
    CurrentValue = 16,
    Flag = "SpeedSlider",
    Callback = function(Value)
-      -- Concept: In game development, this adjusts the Humanoid.WalkSpeed property.
-      -- Developers use server-side validation to ensure this stays within legal limits.
-      print("Speed set to: " .. Value)
+      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+      end
    end,
 })
 
-local JumpToggle = MainTab:CreateToggle({
-   Name = "Infinite Jump Concept",
-   CurrentValue = false,
-   Flag = "JumpToggle",
+local JumpSlider = MovementTab:CreateSlider({
+   Name = "Jump Power",
+   Range = {50, 200},
+   Increment = 5,
+   Suffix = " Power",
+   CurrentValue = 50,
+   Flag = "JumpSlider",
    Callback = function(Value)
-      -- Concept: This usually involves listening to the JumpRequest event.
-      -- Security Note: Anti-cheats often check the frequency of jump requests.
-      print("Infinite Jump toggled: " .. tostring(Value))
+      if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+         game.Players.LocalPlayer.Character.Humanoid.JumpPower = Value
+      end
    end,
 })
 
-local VisualsTab = Window:CreateTab("Visuals", 4483362458)
+-- Visual Features
+local FOVSlider = VisualsTab:CreateSlider({
+   Name = "Field of View",
+   Range = {70, 120},
+   Increment = 1,
+   Suffix = " FOV",
+   CurrentValue = 70,
+   Flag = "FOVSlider",
+   Callback = function(Value)
+      workspace.CurrentCamera.FieldOfView = Value
+   end,
+})
 
-local ESPToggle = VisualsTab:CreateToggle({
-   Name = "Player Highlights (ESP)",
+-- Placeholder for ESP (Educational Logic)
+VisualsTab:CreateToggle({
+   Name = "Player Highlights (ESP Concept)",
    CurrentValue = false,
    Flag = "ESPToggle",
    Callback = function(Value)
-      -- Concept: ESP (Extra Sensory Perception) works by drawing 2D boxes 
-      -- or 3D highlights (Highlight objects) around player characters.
-      print("Visual highlights toggled: " .. tostring(Value))
+      -- In a real development scenario, this would iterate through players
+      -- and add Highlight objects to their characters.
+      Rayfield:Notify({
+         Title = "Feature Info",
+         Content = "ESP logic requires iterating through the Players service and applying Highlights.",
+         Duration = 5,
+         Image = 4483362458,
+      })
    end,
 })
 
 Rayfield:Notify({
-   Title = "Template Loaded",
-   Content = "This is a UI demonstration only.",
+   Title = "Interface Ready",
+   Content = "The utility menu has been loaded successfully.",
    Duration = 5,
    Image = 4483362458,
 })
