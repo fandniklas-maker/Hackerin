@@ -1,346 +1,173 @@
--- ====================================================================
--- RAYFIELD MENU: Movement, Combat & Utility Suite
--- ====================================================================
-
--- Load Rayfield Interface Suite
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Services
-local Players = game:GetService("Players")
+local Window = Rayfield:CreateWindow({
+   Name = "FleetHub | Multi-Hack",
+   LoadingTitle = "Loading FleetHub...",
+   LoadingSubtitle = "by CodingFleet",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "FleetHubConfig",
+      FileName = "MainGui"
+   },
+   KeySystem = false
+})
+
+-- Variables
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
+local Camera = game:GetService("Workspace").CurrentCamera
 
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-
--- Configuration & State Variables
-local Config = {
-    InfiniteJump = false,
+local Flags = {
+    Speed = 16,
+    JumpPower = 50,
     Noclip = false,
-    WalkSpeedEnabled = false,
-    WalkSpeedValue = 16,
-    AimbotEnabled = false,
-    AimbotFOV = 150,
-    AimbotSmoothness = 0.2,
-    AimbotTargetPart = "Head",
-    TreadmillBypass = false,
-    AutoAddSpeed = false,
-    AutoFarmTrophies = false
+    InfJump = false,
+    Aimbot = false,
+    Invisible = false
 }
 
--- Connections references for clean cleanup
-local Connections = {}
+-- Update Character Reference on Respawn
+Player.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    Humanoid = newChar:WaitForChild("Humanoid")
+end)
 
--- ====================================================================
--- HELPER FUNCTIONS
--- ====================================================================
+-- Tabs
+local MainTab = Window:CreateTab("Player", 4483362458)
+local CombatTab = Window:CreateTab("Combat", 4483345998)
 
-local function getCharacter()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-end
+-- [ PLAYER TAB ] --
 
-local function getHumanoid()
-    local char = getCharacter()
-    return char:FindFirstChildOfClass("Humanoid")
-end
-
-local function getRootPart()
-    local char = getCharacter()
-    return char:FindFirstChild("HumanoidRootPart")
-end
-
--- Find closest visible/valid target for Aimbot
-local function getClosestPlayerInFOV()
-    local closestPlayer = nil
-    local shortestDistance = Config.AimbotFOV
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            local targetPart = player.Character:FindFirstChild(Config.AimbotTargetPart)
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-
-            if targetPart and humanoid and humanoid.Health > 0 then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                if onScreen then
-                    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-
-                    if dist < shortestDistance then
-                        shortestDistance = dist
-                        closestPlayer = player
-                    end
-                end
-            end
-        end
-    end
-
-    return closestPlayer
-end
-
--- ====================================================================
--- RAYFIELD WINDOW & TABS SETUP
--- ====================================================================
-
-local Window = Rayfield:CreateWindow({
-    Name = "⚡ Universal Game Suite | Rayfield",
-    LoadingTitle = "Loading Modules...",
-    LoadingSubtitle = "by Utility Hub",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "RayfieldConfig",
-        FileName = "Config_Main"
-    },
-    KeySystem = false
+MainTab:CreateSlider({
+   Name = "WalkSpeed",
+   Range = {16, 300},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "WS_Slider",
+   Callback = function(Value)
+      Flags.Speed = Value
+      Humanoid.WalkSpeed = Value
+   end,
 })
 
-local MovementTab = Window:CreateTab("🏃 Movement", 4483362458)
-local CombatTab = Window:CreateTab("🎯 Combat", 4483362458)
-local SimulatorTab = Window:CreateTab("🏆 Stats / Simulator", 4483362458)
-
--- ====================================================================
--- TAB: MOVEMENT
--- ====================================================================
-
--- Infinite Jump
-MovementTab:CreateToggle({
-    Name = "Infinite Jump",
-    CurrentValue = false,
-    Flag = "InfiniteJumpToggle",
-    Callback = function(Value)
-        Config.InfiniteJump = Value
-    end,
+MainTab:CreateSlider({
+   Name = "JumpPower",
+   Range = {50, 500},
+   Increment = 1,
+   Suffix = "Power",
+   CurrentValue = 50,
+   Flag = "JP_Slider",
+   Callback = function(Value)
+      Flags.JumpPower = Value
+      Humanoid.JumpPower = Value
+   end,
 })
 
+MainTab:CreateToggle({
+   Name = "Infinite Jump",
+   CurrentValue = false,
+   Flag = "InfJump",
+   Callback = function(Value)
+      Flags.InfJump = Value
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Noclip",
+   CurrentValue = false,
+   Flag = "Noclip",
+   Callback = function(Value)
+      Flags.Noclip = Value
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Invisibility (Local)",
+   CurrentValue = false,
+   Flag = "Invis",
+   Callback = function(Value)
+      Flags.Invisible = Value
+      for _, part in pairs(Character:GetDescendants()) do
+          if part:IsA("BasePart") or part:IsA("Decal") then
+              if part.Name ~= "HumanoidRootPart" then
+                  part.Transparency = Value and 1 or 0
+              end
+          end
+      end
+   end,
+})
+
+-- [ COMBAT TAB ] --
+
+CombatTab:CreateToggle({
+   Name = "Aimbot (Nearest Part)",
+   CurrentValue = false,
+   Flag = "Aimbot",
+   Callback = function(Value)
+      Flags.Aimbot = Value
+   end,
+})
+
+CombatTab:CreateSection("Settings")
+CombatTab:CreateLabel("Aimbot targets the closest player's Head.")
+
+-- [ LOGIC LOOPS ] --
+
+-- Infinite Jump Logic
 UserInputService.JumpRequest:Connect(function()
-    if Config.InfiniteJump then
-        local humanoid = getHumanoid()
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
+    if Flags.InfJump then
+        Humanoid:ChangeState("Jumping")
     end
 end)
 
--- Noclip
-MovementTab:CreateToggle({
-    Name = "Noclip",
-    CurrentValue = false,
-    Flag = "NoclipToggle",
-    Callback = function(Value)
-        Config.Noclip = Value
-    end,
-})
-
+-- Noclip & Loop Logic
 RunService.Stepped:Connect(function()
-    if Config.Noclip and LocalPlayer.Character then
-        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then
+    -- Maintain Speed/Jump
+    if Humanoid then
+        Humanoid.WalkSpeed = Flags.Speed
+        Humanoid.JumpPower = Flags.JumpPower
+    end
+
+    -- Noclip Logic
+    if Flags.Noclip then
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") then
                 part.CanCollide = false
             end
         end
     end
-end)
 
--- WalkSpeed Slider & Toggle
-MovementTab:CreateSlider({
-    Name = "WalkSpeed Value",
-    Range = {16, 250},
-    Increment = 1,
-    Suffix = " Speed",
-    CurrentValue = 16,
-    Flag = "WalkSpeedSlider",
-    Callback = function(Value)
-        Config.WalkSpeedValue = Value
-        if Config.WalkSpeedEnabled then
-            local hum = getHumanoid()
-            if hum then hum.WalkSpeed = Value end
-        end
-    end,
-})
+    -- Aimbot Logic
+    if Flags.Aimbot then
+        local closestPlayer = nil
+        local shortestDistance = math.huge
 
-MovementTab:CreateToggle({
-    Name = "Enable Custom WalkSpeed",
-    CurrentValue = false,
-    Flag = "EnableSpeedToggle",
-    Callback = function(Value)
-        Config.WalkSpeedEnabled = Value
-        local hum = getHumanoid()
-        if hum then
-            hum.WalkSpeed = Value and Config.WalkSpeedValue or 16
-        end
-    end,
-})
-
--- Keep WalkSpeed locked even if reset by game
-RunService.RenderStepped:Connect(function()
-    if Config.WalkSpeedEnabled then
-        local hum = getHumanoid()
-        if hum and hum.WalkSpeed ~= Config.WalkSpeedValue then
-            hum.WalkSpeed = Config.WalkSpeedValue
-        end
-    end
-end)
-
--- Treadmill / Velocity Lock Bypass
-MovementTab:CreateToggle({
-    Name = "Bypass Treadmill Velocity Lock",
-    CurrentValue = false,
-    Flag = "TreadmillBypassToggle",
-    Callback = function(Value)
-        Config.TreadmillBypass = Value
-    end,
-})
-
-RunService.Heartbeat:Connect(function()
-    if Config.TreadmillBypass then
-        local hrp = getRootPart()
-        if hrp then
-            -- Neutralize forced platform conveyor/treadmill velocity anchoring
-            if hrp.AssemblyLinearVelocity.Magnitude < 0.1 and hrp:FindFirstChild("BodyVelocity") then
-                hrp.BodyVelocity:Destroy()
-            end
-        end
-    end
-end)
-
--- ====================================================================
--- TAB: COMBAT (AIMBOT)
--- ====================================================================
-
-CombatTab:CreateToggle({
-    Name = "Camera Aimbot",
-    CurrentValue = false,
-    Flag = "AimbotToggle",
-    Callback = function(Value)
-        Config.AimbotEnabled = Value
-    end,
-})
-
-CombatTab:CreateSlider({
-    Name = "Aimbot FOV Radius",
-    Range = {30, 500},
-    Increment = 5,
-    Suffix = " px",
-    CurrentValue = 150,
-    Flag = "AimbotFOVSlider",
-    Callback = function(Value)
-        Config.AimbotFOV = Value
-    end,
-})
-
-CombatTab:CreateSlider({
-    Name = "Smoothing Factor",
-    Range = {0.05, 1},
-    Increment = 0.05,
-    Suffix = " factor",
-    CurrentValue = 0.2,
-    Flag = "AimbotSmoothnessSlider",
-    Callback = function(Value)
-        Config.AimbotSmoothness = Value
-    end,
-})
-
-CombatTab:CreateDropdown({
-    Name = "Target Hitbox",
-    Options = {"Head", "HumanoidRootPart", "UpperTorso"},
-    CurrentOption = {"Head"},
-    Flag = "AimbotTargetDropdown",
-    Callback = function(Option)
-        Config.AimbotTargetPart = Option[1] or "Head"
-    end,
-})
-
--- Aimbot Execution Loop
-RunService.RenderStepped:Connect(function()
-    if Config.AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local targetPlayer = getClosestPlayerInFOV()
-        if targetPlayer and targetPlayer.Character then
-            local targetPart = targetPlayer.Character:FindFirstChild(Config.AimbotTargetPart)
-            if targetPart then
-                local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
-                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, Config.AimbotSmoothness)
-            end
-        end
-    end
-end)
-
--- ====================================================================
--- TAB: SIMULATOR / STATS (+1 Speed & Trophy Helpers)
--- ====================================================================
-
-SimulatorTab:CreateToggle({
-    Name = "Auto-Gain Speed (+1 Step Loop)",
-    CurrentValue = false,
-    Flag = "AutoSpeedToggle",
-    Callback = function(Value)
-        Config.AutoAddSpeed = Value
-        if Value then
-            task.spawn(function()
-                while Config.AutoAddSpeed do
-                    -- Example: simulate stepped triggers or invoke speed Remotes
-                    local hrp = getRootPart()
-                    if hrp then
-                        -- Micro-hop to register walking/steps if required by the game
-                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 0.05, 0)
+        for _, v in pairs(game.Players:GetPlayers()) do
+            if v ~= Player and v.Character and v.Character:FindFirstChild("Head") then
+                local pos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
+                if onScreen then
+                    local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                    if distance < shortestDistance then
+                        closestPlayer = v
+                        shortestDistance = distance
                     end
-                    task.wait(0.1)
                 end
-            end)
-        end
-    end,
-})
-
-SimulatorTab:CreateToggle({
-    Name = "Auto-Collect / Claim Trophies",
-    CurrentValue = false,
-    Flag = "AutoTrophiesToggle",
-    Callback = function(Value)
-        Config.AutoFarmTrophies = Value
-        if Value then
-            task.spawn(function()
-                while Config.AutoFarmTrophies do
-                    -- Scans for workspace collectibles labeled 'Trophy' or 'Win'
-                    for _, obj in ipairs(Workspace:GetDescendants()) do
-                        if not Config.AutoFarmTrophies then break end
-                        if obj:IsA("TouchTransmitter") and (obj.Parent.Name:lower():find("trophy") or obj.Parent.Name:lower():find("win")) then
-                            local hrp = getRootPart()
-                            if hrp and obj.Parent:IsA("BasePart") then
-                                firetouchinterest(hrp, obj.Parent, 0)
-                                task.wait(0.01)
-                                firetouchinterest(hrp, obj.Parent, 1)
-                            end
-                        end
-                    end
-                    task.wait(0.5)
-                end
-            end)
-        end
-    end,
-})
-
-SimulatorTab:CreateButton({
-    Name = "Force Set Trophy Remote Check",
-    Callback = function()
-        Rayfield:Notify({
-            Title = "Scanning Remotes",
-            Content = "Scanned ReplicatedStorage for reward Remotes.",
-            Duration = 3,
-            Image = 4483362458
-        })
-        -- Trigger common remote event names if they exist
-        local rep = game:GetService("ReplicatedStorage")
-        for _, rem in ipairs(rep:GetDescendants()) do
-            if rem:IsA("RemoteEvent") and (rem.Name:lower():find("win") or rem.Name:lower():find("trophy")) then
-                rem:FireServer()
             end
         end
-    end,
-})
+
+        if closestPlayer then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestPlayer.Character.Head.Position)
+        end
+    end
+end)
 
 Rayfield:Notify({
-    Title = "Menu Loaded",
-    Content = "Rayfield Menu initialized successfully!",
-    Duration = 4,
-    Image = 4483362458
+   Title = "FleetHub Loaded",
+   Content = "Enjoy your hacks!",
+   Duration = 5,
+   Image = 4483345998,
 })
