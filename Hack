@@ -1,178 +1,210 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "FleetHub | Multi-Hack",
-   LoadingTitle = "Loading FleetHub...",
+   Name = "CodingFleet Hack Menu",
+   LoadingTitle = "Loading Fleet Hub...",
    LoadingSubtitle = "by CodingFleet",
    ConfigurationSaving = {
       Enabled = true,
-      FolderName = "FleetHubConfig",
-      FileName = "MainConfig"
+      FolderName = "FleetHub",
+      FileName = "FleetConfig"
    },
    KeySystem = false
 })
 
 -- Variables
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-local SpeedEnabled = false
-local WalkSpeedValue = 16
-local JumpPowerValue = 50
-local InfiniteJumpEnabled = false
-local NoclipEnabled = false
-local AimbotEnabled = false
-local AimbotFOV = 150
-local AimbotSmoothing = 1 -- 1 = Instant
+local Toggles = {
+    InfiniteJump = false,
+    Noclip = false,
+    Aimbot = false
+}
 
--- Tabs
-local MainTab = Window:CreateTab("Player", 4483362458)
-local CombatTab = Window:CreateTab("Combat", 4483362458)
+local Values = {
+    WalkSpeed = 16,
+    JumpPower = 50,
+    AimbotSmoothness = 0.2
+}
 
--- [ PLAYER TAB ] --
+-- Movement Functions
+UserInputService.JumpRequest:Connect(function()
+    if Toggles.InfiniteJump then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
+end)
 
--- Speed Slider
+RunService.Stepped:Connect(function()
+    if Toggles.Noclip then
+        if LocalPlayer.Character then
+            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    v.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- Aimbot Function
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos = Camera:WorldToViewportPoint(player.Character.PrimaryPart.Position)
+            local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).magnitude
+            
+            if magnitude < shortestDistance then
+                closestPlayer = player
+                shortestDistance = magnitude
+            end
+        end
+    end
+    return closestPlayer
+end
+
+RunService.RenderStepped:Connect(function()
+    if Toggles.Aimbot then
+        local target = getClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Character.Head.Position), Values.AimbotSmoothness)
+        end
+    end
+end)
+
+-- TABS --
+
+-- Movement Tab
+local MainTab = Window:CreateTab("Movement", 4483362458) -- Section icon
+
 MainTab:CreateSlider({
    Name = "WalkSpeed",
-   Range = {16, 500},
+   Range = {16, 300},
    Increment = 1,
-   Suffix = " Speed",
+   Suffix = "Speed",
    CurrentValue = 16,
-   Flag = "SpeedSlider",
+   Flag = "WS_Slider",
    Callback = function(Value)
-      WalkSpeedValue = Value
-      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-          LocalPlayer.Character.Humanoid.WalkSpeed = Value
-      end
+      Values.WalkSpeed = Value
+      LocalPlayer.Character.Humanoid.WalkSpeed = Value
    end,
 })
 
--- Jump Power Slider
-MainTab:CreateSlider({
-   Name = "JumpPower",
-   Range = {50, 500},
-   Increment = 1,
-   Suffix = " Power",
-   CurrentValue = 50,
-   Flag = "JumpSlider",
-   Callback = function(Value)
-      JumpPowerValue = Value
-      if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-          LocalPlayer.Character.Humanoid.JumpPower = Value
-          LocalPlayer.Character.Humanoid.UseJumpPower = true
-      end
-   end,
-})
-
--- Infinite Jump Toggle
 MainTab:CreateToggle({
    Name = "Infinite Jump",
    CurrentValue = false,
    Flag = "InfJump",
    Callback = function(Value)
-      InfiniteJumpEnabled = Value
+      Toggles.InfiniteJump = Value
    end,
 })
 
--- Noclip Toggle
 MainTab:CreateToggle({
    Name = "Noclip",
    CurrentValue = false,
    Flag = "Noclip",
    Callback = function(Value)
-      NoclipEnabled = Value
+      Toggles.Noclip = Value
    end,
 })
 
--- [ COMBAT TAB ] --
+-- Combat Tab
+local CombatTab = Window:CreateTab("Combat", 4483362458)
 
 CombatTab:CreateToggle({
-   Name = "Aimbot",
+   Name = "Aimbot (Lock to Head)",
    CurrentValue = false,
    Flag = "Aimbot",
    Callback = function(Value)
-      AimbotEnabled = Value
+      Toggles.Aimbot = Value
    end,
 })
 
 CombatTab:CreateSlider({
-   Name = "Aimbot FOV",
-   Range = {50, 800},
-   Increment = 10,
-   Suffix = " Radius",
-   CurrentValue = 150,
-   Flag = "AimbotFOV",
+   Name = "Aimbot Smoothness",
+   Range = {0, 1},
+   Increment = 0.1,
+   Suffix = "Smooth",
+   CurrentValue = 0.2,
+   Flag = "AimSmooth",
    Callback = function(Value)
-      AimbotFOV = Value
+      Values.AimbotSmoothness = Value
    end,
 })
 
--- Logic Loops
+-- Players Tab
+local PlayerTab = Window:CreateTab("Players", 4483362458)
 
--- Infinite Jump Logic
-UserInputService.JumpRequest:Connect(function()
-    if InfiniteJumpEnabled then
-        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:ChangeState("Jumping")
-        end
-    end
-end)
+local SelectedPlayer = ""
+local PlayerDropdown = PlayerTab:CreateDropdown({
+   Name = "Select Player",
+   Options = {},
+   CurrentOption = "",
+   MultipleOptions = false,
+   Flag = "PlayerDropdown",
+   Callback = function(Option)
+      SelectedPlayer = Option[1]
+   end,
+})
 
--- Noclip / Speed Logic
-RunService.Stepped:Connect(function()
-    if NoclipEnabled and LocalPlayer.Character then
-        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = false
-            end
-        end
-    end
-    
-    -- Maintain Speed (Prevents game resets)
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = WalkSpeedValue
-    end
-end)
-
--- Aimbot Logic
-local function GetClosestPlayer()
-    local closest = nil
-    local shortestDistance = AimbotFOV
-
+-- Function to refresh player list
+local function updatePlayerList()
+    local pList = {}
     for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
-            local pos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local mousePos = UserInputService:GetMouseLocation()
-                local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
-                
-                if distance < shortestDistance then
-                    closest = v
-                    shortestDistance = distance
-                end
-            end
+        if v.Name ~= LocalPlayer.Name then
+            table.insert(pList, v.Name)
         end
     end
-    return closest
+    PlayerDropdown:Refresh(pList, true)
 end
 
-RunService.RenderStepped:Connect(function()
-    if AimbotEnabled then
-        local target = GetClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPos = target.Character.HumanoidRootPart.Position
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-        end
-    end
-end)
+PlayerTab:CreateButton({
+   Name = "Refresh Player List",
+   Callback = function()
+      updatePlayerList()
+   end,
+})
+
+PlayerTab:CreateButton({
+   Name = "Teleport To Player",
+   Callback = function()
+      local target = Players:FindFirstChild(SelectedPlayer)
+      if target and target.Character then
+          LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+      end
+   end,
+})
+
+PlayerTab:CreateButton({
+   Name = "Bring Player (Requires Tool/FE Bypass)",
+   Callback = function()
+      -- Note: Bringing players in FilteringEnabled (FE) games is restricted.
+      -- This script attempts a standard CFrame move which usually only works if you have network ownership.
+      local target = Players:FindFirstChild(SelectedPlayer)
+      if target and target.Character then
+          target.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+          Rayfield:Notify({
+             Title = "Bring Attempted",
+             Content = "Attempted to bring " .. SelectedPlayer .. ". Note: May not work in all games due to FE.",
+             Duration = 5,
+             Image = 4483362458,
+          })
+      end
+   end,
+})
+
+-- Initial Refresh
+updatePlayerList()
 
 Rayfield:Notify({
-   Title = "FleetHub Loaded",
-   Content = "Script is ready to use!",
+   Title = "Success!",
+   Content = "CodingFleet Menu Loaded Successfully",
    Duration = 5,
    Image = 4483362458,
 })
