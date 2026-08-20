@@ -7,92 +7,62 @@ local Window = Rayfield:CreateWindow({
    ConfigurationSaving = {
       Enabled = true,
       FolderName = "FleetHub",
-      FileName = "FleetConfig"
+      FileName = "Config"
    },
-   KeySystem = false
+   Discord = {
+      Enabled = false,
+      Invite = "",
+      RememberJoins = true
+   },
+   KeySystem = false,
 })
 
 -- Variables
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+local Player = game.Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
 
-local Toggles = {
-    InfiniteJump = false,
-    Noclip = false,
-    Aimbot = false
-}
-
-local Values = {
+local Vars = {
     WalkSpeed = 16,
     JumpPower = 50,
-    AimbotSmoothness = 0.2
+    InfiniteJump = false,
+    Noclip = false,
+    Aimbot = false,
+    AimbotTarget = nil
 }
 
--- Movement Functions
-UserInputService.JumpRequest:Connect(function()
-    if Toggles.InfiniteJump then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-    end
+-- Update Character References on Respawn
+Player.CharacterAdded:Connect(function(NewChar)
+    Character = NewChar
+    Humanoid = NewChar:WaitForChild("Humanoid")
+    RootPart = NewChar:WaitForChild("HumanoidRootPart")
 end)
 
-RunService.Stepped:Connect(function()
-    if Toggles.Noclip then
-        if LocalPlayer.Character then
-            for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
-                end
-            end
-        end
-    end
-end)
+--------------------------------------------------------------------------------
+-- TABS
+--------------------------------------------------------------------------------
 
--- Aimbot Function
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
+local MainTab = Window:CreateTab("Main", 4483362458) -- Main Features
+local CombatTab = Window:CreateTab("Combat", 4483362458) -- Aimbot
+local PlayersTab = Window:CreateTab("Players", 4483362458) -- TP / Bring
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local pos = Camera:WorldToViewportPoint(player.Character.PrimaryPart.Position)
-            local magnitude = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).magnitude
-            
-            if magnitude < shortestDistance then
-                closestPlayer = player
-                shortestDistance = magnitude
-            end
-        end
-    end
-    return closestPlayer
-end
+--------------------------------------------------------------------------------
+-- MAIN TAB (Speed, Jump, Noclip)
+--------------------------------------------------------------------------------
 
-RunService.RenderStepped:Connect(function()
-    if Toggles.Aimbot then
-        local target = getClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Character.Head.Position), Values.AimbotSmoothness)
-        end
-    end
-end)
-
--- TABS --
-
--- Movement Tab
-local MainTab = Window:CreateTab("Movement", 4483362458) -- Section icon
+MainTab:CreateSection("Movement")
 
 MainTab:CreateSlider({
    Name = "WalkSpeed",
-   Range = {16, 300},
+   Range = {16, 500},
    Increment = 1,
    Suffix = "Speed",
    CurrentValue = 16,
    Flag = "WS_Slider",
    Callback = function(Value)
-      Values.WalkSpeed = Value
-      LocalPlayer.Character.Humanoid.WalkSpeed = Value
+      Vars.WalkSpeed = Value
+      Humanoid.WalkSpeed = Value
    end,
 })
 
@@ -101,110 +71,125 @@ MainTab:CreateToggle({
    CurrentValue = false,
    Flag = "InfJump",
    Callback = function(Value)
-      Toggles.InfiniteJump = Value
+      Vars.InfiniteJump = Value
    end,
 })
+
+-- Infinite Jump Logic
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if Vars.InfiniteJump then
+        Humanoid:ChangeState("Jumping")
+    end
+end)
 
 MainTab:CreateToggle({
    Name = "Noclip",
    CurrentValue = false,
    Flag = "Noclip",
    Callback = function(Value)
-      Toggles.Noclip = Value
+      Vars.Noclip = Value
    end,
 })
 
--- Combat Tab
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-
-CombatTab:CreateToggle({
-   Name = "Aimbot (Lock to Head)",
-   CurrentValue = false,
-   Flag = "Aimbot",
-   Callback = function(Value)
-      Toggles.Aimbot = Value
-   end,
-})
-
-CombatTab:CreateSlider({
-   Name = "Aimbot Smoothness",
-   Range = {0, 1},
-   Increment = 0.1,
-   Suffix = "Smooth",
-   CurrentValue = 0.2,
-   Flag = "AimSmooth",
-   Callback = function(Value)
-      Values.AimbotSmoothness = Value
-   end,
-})
-
--- Players Tab
-local PlayerTab = Window:CreateTab("Players", 4483362458)
-
-local SelectedPlayer = ""
-local PlayerDropdown = PlayerTab:CreateDropdown({
-   Name = "Select Player",
-   Options = {},
-   CurrentOption = "",
-   MultipleOptions = false,
-   Flag = "PlayerDropdown",
-   Callback = function(Option)
-      SelectedPlayer = Option[1]
-   end,
-})
-
--- Function to refresh player list
-local function updatePlayerList()
-    local pList = {}
-    for _, v in pairs(Players:GetPlayers()) do
-        if v.Name ~= LocalPlayer.Name then
-            table.insert(pList, v.Name)
+-- Noclip Logic
+game:GetService("RunService").Stepped:Connect(function()
+    if Vars.Noclip then
+        for _, part in pairs(Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
         end
     end
-    PlayerDropdown:Refresh(pList, true)
+end)
+
+--------------------------------------------------------------------------------
+-- COMBAT TAB (Aimbot)
+--------------------------------------------------------------------------------
+
+CombatTab:CreateSection("Aimbot")
+
+CombatTab:CreateToggle({
+   Name = "Enable Aimbot",
+   CurrentValue = false,
+   Flag = "AimbotToggle",
+   Callback = function(Value)
+      Vars.Aimbot = Value
+   end,
+})
+
+-- Aimbot Logic
+local Camera = workspace.CurrentCamera
+local Mouse = Player:GetMouse()
+
+local function GetClosestPlayer()
+    local Closest = nil
+    local ShortestDistance = math.huge
+
+    for _, v in pairs(game.Players:GetPlayers()) do
+        if v ~= Player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") and v.Character:FindFirstChild("Humanoid").Health > 0 then
+            local Pos = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+            local Magnitude = (Vector2.new(Pos.X, Pos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+            
+            if Magnitude < ShortestDistance then
+                Closest = v
+                ShortestDistance = Magnitude
+            end
+        end
+    end
+    return Closest
 end
 
-PlayerTab:CreateButton({
-   Name = "Refresh Player List",
-   Callback = function()
-      updatePlayerList()
+game:GetService("RunService").RenderStepped:Connect(function()
+    if Vars.Aimbot then
+        local Target = GetClosestPlayer()
+        if Target and Target.Character then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Character.HumanoidRootPart.Position)
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- PLAYERS TAB (Teleport / Bring)
+--------------------------------------------------------------------------------
+
+PlayersTab:CreateSection("Player Management")
+
+local SelectedPlayer = ""
+
+PlayersTab:CreateInput({
+   Name = "Target Player Name",
+   PlaceholderText = "Username (partial)",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      SelectedPlayer = Text
    end,
 })
 
-PlayerTab:CreateButton({
+PlayersTab:CreateButton({
    Name = "Teleport To Player",
    Callback = function()
-      local target = Players:FindFirstChild(SelectedPlayer)
-      if target and target.Character then
-          LocalPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+      for _, v in pairs(game.Players:GetPlayers()) do
+         if v.Name:lower():find(SelectedPlayer:lower()) and v.Character then
+            RootPart.CFrame = v.Character.HumanoidRootPart.CFrame
+            Rayfield:Notify({Title = "Success", Content = "Teleported to " .. v.Name, Duration = 3})
+            break
+         end
       end
    end,
 })
 
-PlayerTab:CreateButton({
-   Name = "Bring Player (Requires Tool/FE Bypass)",
+PlayersTab:CreateButton({
+   Name = "Bring Player (Client-Side/Network)",
    Callback = function()
-      -- Note: Bringing players in FilteringEnabled (FE) games is restricted.
-      -- This script attempts a standard CFrame move which usually only works if you have network ownership.
-      local target = Players:FindFirstChild(SelectedPlayer)
-      if target and target.Character then
-          target.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
-          Rayfield:Notify({
-             Title = "Bring Attempted",
-             Content = "Attempted to bring " .. SelectedPlayer .. ". Note: May not work in all games due to FE.",
-             Duration = 5,
-             Image = 4483362458,
-          })
+      for _, v in pairs(game.Players:GetPlayers()) do
+         if v.Name:lower():find(SelectedPlayer:lower()) and v.Character then
+            -- Note: This usually only works if you have network ownership or a tool
+            v.Character.HumanoidRootPart.CFrame = RootPart.CFrame
+            Rayfield:Notify({Title = "Attempted", Content = "Tried to bring " .. v.Name, Duration = 3})
+            break
+         end
       end
    end,
 })
 
--- Initial Refresh
-updatePlayerList()
-
-Rayfield:Notify({
-   Title = "Success!",
-   Content = "CodingFleet Menu Loaded Successfully",
-   Duration = 5,
-   Image = 4483362458,
-})
+Rayfield:LoadConfiguration()
